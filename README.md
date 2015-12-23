@@ -10,11 +10,13 @@ The stacks are very customisable, including an RDS instance for database storage
 
 ## Create Security Group
 
-Create security group for RDS instance by uploading the rds-security-group template.  This is simple to allow access to the database from the server.
+Create security group for RDS instance by uploading the rds-security-group template.  This is simple stack to allow access to the database from the server.
 
 ### Create MySQL Instance
 
-Create the MySQL instance by uploading the RDS template.  If the Rancher server goes down, all your data will be stored here.  Create this by uploading the RDS template and use the RancherRDSSecurityGroup ID resource you just created.  This will be found in the Resources tab in the AWS console.
+Create the MySQL instance by uploading the RDS template.  If the Rancher server goes down, all your data will be stored here.  Create this by uploading the RDS template and use the RancherRDSSecurityGroup ID resource you just created.  If is important that you copy the correct security group, otherwise it will not work.  
+
+This security group will be found in the Resources tab in the AWS console.
 
 ### Create Rancher Server Instance
 
