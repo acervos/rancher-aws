@@ -3,7 +3,7 @@
   "Parameters": {
     "VpcId": {
       "Description": "The Id of the VPC to attach the environment to",
-      "Type": "String",
+      "Type": "AWS::EC2::VPC::Id",
       "Default": "vpc-"
     }
   },

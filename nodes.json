@@ -36,7 +36,7 @@
       "Default": "ami-9d6fb4ee"
     },
     "KeyName": {
-      "Type": "String"
+      "Type": "AWS::EC2::KeyPair::KeyName"
     },
     "CPUAlarmHighEvalPeriods": {
       "Type": "String",
@@ -62,20 +62,8 @@
       "Type": "String"
     },
     "VpcId": {
-      "Type": "String",
+      "Type": "AWS::EC2::VPC::Id",
       "Default": "vpc-"
-    },
-    "PublicSubnet1Id": {
-      "Type": "String",
-      "Default": "subnet-"
-    },
-    "PublicSubnet2Id": {
-      "Type": "String",
-      "Default": "subnet-"
-    },
-    "PublicSubnet3Id": {
-      "Type": "String",
-      "Default": "subnet-"
     }
   },
   "Resources": {
@@ -277,7 +265,7 @@
         "VpcId": {
           "Ref": "VpcId"
         },
-        "GroupDescription": "A component security group allowing access only from the corresponding ELB"
+        "GroupDescription": "A component security group allowing access to the outside world"
       }
     },
     "ComponentInstanceProfile": {

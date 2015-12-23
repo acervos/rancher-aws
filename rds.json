@@ -25,6 +25,7 @@
       "Type": "String"
     },
     "MasterUserPassword": {
+      "NoEcho": true,
       "Type": "String"
     },
     "MultiAZ": {
@@ -47,16 +48,8 @@
       "Type": "String",
       "Default": "sg-"
     },
-    "PublicSubnet1Id": {
-      "Type": "String",
-      "Default": "subnet-"
-    },
-    "PublicSubnet2Id": {
-      "Type": "String",
-      "Default": "subnet-"
-    },
-    "PublicSubnet3Id": {
-      "Type": "String",
+    "PublicSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
       "Default": "subnet-"
     }
   },
@@ -113,17 +106,9 @@
       "Type": "AWS::RDS::DBSubnetGroup",
       "Properties": {
         "DBSubnetGroupDescription": "VPC access",
-        "SubnetIds": [
-          {
-            "Ref": "PublicSubnet1Id"
-          },
-          {
-            "Ref": "PublicSubnet2Id"
-          },
-          {
-            "Ref": "PublicSubnet3Id"
-          }
-        ]
+        "SubnetIds": {
+          "Ref": "PublicSubnets"
+        }
       }
     }
   }

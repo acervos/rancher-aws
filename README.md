@@ -8,15 +8,15 @@ This guide is designed for those who want a hassle free setup of Rancher using R
 
 The stacks are very customisable, including an RDS instance for database storage of the Rancher Server, a single EC2 instance for Rancher Server and several instances for the Rancher nodes.  There is a security group for the RDS instance.
 
-## Step 1
+## Create Security Group
 
 Create security group for RDS instance by uploading the rds-security-group template.  This is simple to allow access to the database from the server.
 
-### Step 2
+### Create MySQL Instance
 
 Create the MySQL instance by uploading the RDS template.  If the Rancher server goes down, all your data will be stored here.  Create this by uploading the RDS template and use the RancherRDSSecurityGroup ID resource you just created.  This will be found in the Resources tab in the AWS console.
 
-### Step 3
+### Create Rancher Server Instance
 
 Create the Rancher Server instance by uploading the rancher template.  This instance will run on top of RancherOS, you will need to use the RDSComponentSecurityGroup as well as all of the MySQL details from the RDS section of the AWS Console.  
 
@@ -24,7 +24,7 @@ Once completed, the Rancher server will be available at the load balancer URL fo
 
 If running RancherOS is not an option, you will need to chance the UserData section to remove the Rancher specific start up options.
 
-### Step 4
+### Create Rancher Node Instances
 
 Create the Rancher Nodes.  If you are going to use to use the load balancer URL rather than a domain you own, visit that in your browser, otherwise you can use a domain you own via a service such as Route53.  
 

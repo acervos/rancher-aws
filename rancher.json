@@ -1,11 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Parameters": {
-    "Environment": {
-      "Type": "String",
-      "MaxLength": 6,
-      "Default": "test"
-    },
     "UpdatePauseTime": {
       "Type": "String",
       "Description": "The time to wait between new instances coming online and the next batch being killed during an ASG update.",
@@ -46,25 +41,17 @@
       "Default": "ami-9d6fb4ee"
     },
     "KeyName": {
-      "Type": "String"
+      "Type": "AWS::EC2::KeyPair::KeyName"
     },
     "RancherRDSSecurityGroup": {
       "Type": "String"
     },
     "VpcId": {
-      "Type": "String",
+      "Type": "AWS::EC2::VPC::Id",
       "Default": "vpc-"
     },
-    "PublicSubnet1Id": {
-      "Type": "String",
-      "Default": "subnet-"
-    },
-    "PublicSubnet2Id": {
-      "Type": "String",
-      "Default": "subnet-"
-    },
-    "PublicSubnet3Id": {
-      "Type": "String",
+    "PublicSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
       "Default": "subnet-"
     },
     "ELBConnectionDraining": {
@@ -306,17 +293,9 @@
       "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties": {
         "CrossZone": true,
-        "Subnets": [
-          {
-            "Ref": "PublicSubnet1Id"
-          },
-          {
-            "Ref": "PublicSubnet2Id"
-          },
-          {
-            "Ref": "PublicSubnet3Id"
-          }
-        ],
+        "Subnets": {
+          "Ref": "PublicSubnets"
+        },
         "Listeners": [
           {
             "InstancePort": 8080,
