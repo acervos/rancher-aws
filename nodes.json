@@ -1,16 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Parameters": {
-    "UpdatePauseTime": {
-      "Type": "String",
-      "Description": "The time to wait between new instances coming online and the next batch being killed during an ASG update.",
-      "Default": "PT0S"
-    },
-    "UpdateMaxBatchSize": {
-      "Type": "String",
-      "Description": "The maximum number of instances to be killed at one time during an ASG update.",
-      "Default": 1
-    },
     "UpdateMinInService": {
       "Type": "String",
       "Description": "The minimum number of instances in service during an ASG update.",
@@ -74,12 +64,8 @@
           "MinInstancesInService": {
             "Ref": "UpdateMinInService"
           },
-          "MaxBatchSize": {
-            "Ref": "UpdateMaxBatchSize"
-          },
-          "PauseTime": {
-            "Ref": "UpdatePauseTime"
-          }
+          "MaxBatchSize": 1,
+          "PauseTime": "PT0S"
         }
       },
       "Properties": {
