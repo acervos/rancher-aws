@@ -1,30 +1,20 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Parameters": {
-    "UpdatePauseTime": {
-      "Type": "String",
-      "Description": "The time to wait between new instances coming online and the next batch being killed during an ASG update.",
-      "Default": "PT0S"
-    },
-    "UpdateMaxBatchSize": {
-      "Type": "String",
-      "Description": "The maximum number of instances to be killed at one time during an ASG update.",
-      "Default": 1
-    },
     "UpdateMinInService": {
       "Type": "String",
       "Description": "The minimum number of instances in service during an ASG update.",
-      "Default": 0
+      "Default": 1
     },
     "MinSize": {
       "Type": "String",
-      "Description": "The minimum number of instances",
+      "Description": "The minimum number of rancher server instances",
       "Default": 1
     },
     "MaxSize": {
       "Type": "String",
-      "Description": "The maximum number of instances",
-      "Default": 1
+      "Description": "The maximum number of rancher server instances",
+      "Default": 2
     },
     "HealthCheckGracePeriod": {
       "Type": "String",
@@ -34,7 +24,7 @@
     "InstanceType": {
       "Type": "String",
       "Description": "The size of the instances",
-      "Default": "t2.small"
+      "Default": "t2.medium"
     },
     "ImageId": {
       "Type": "String",
@@ -58,11 +48,13 @@
     },
     "AllocatedStorage": {
       "Type": "String",
-      "Default": "5"
+      "Default": "5",
+      "Description": "Disk space, default 5GB"
     },
     "BackupRetentionPeriod": {
       "Type": "String",
-      "Default": "7"
+      "Default": "7",
+      "Description": "Number of days"
     },
     "DBInstanceClass": {
       "Type": "String",
@@ -77,27 +69,33 @@
       "Default": "rancher"
     },
     "MasterUsername": {
-      "Type": "String"
+      "Type": "String",
+      "Description": "Username for database access"
     },
     "MasterUserPassword": {
       "NoEcho": true,
-      "Type": "String"
+      "Type": "String",
+      "Description": "Password for database access"
     },
     "MultiAZ": {
       "Type": "String",
-      "Default": true
+      "Default": true,
+      "Description": "Provides enhanced availablily for RDS"
     },
     "Port": {
       "Type": "String",
-      "Default": "3306"
+      "Default": "3306",
+      "Description": "Standard Port for MySQL"
     },
     "PubliclyAccessible": {
       "Type": "String",
-      "Default": false
+      "Default": false,
+      "Description": "Determines if the MySQL instance can be connected to outside of you VPC"
     },
     "StorageType": {
       "Type": "String",
-      "Default": "gp2"
+      "Default": "gp2",
+      "Description": "Disk type for RDS"
     }
   },
   "Resources": {
@@ -108,12 +106,8 @@
           "MinInstancesInService": {
             "Ref": "UpdateMinInService"
           },
-          "MaxBatchSize": {
-            "Ref": "UpdateMaxBatchSize"
-          },
-          "PauseTime": {
-            "Ref": "UpdatePauseTime"
-          }
+          "MaxBatchSize": 1,
+          "PauseTime": "PT0S"
         }
       },
       "Properties": {

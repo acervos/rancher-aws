@@ -6,23 +6,13 @@ This guide is designed for those who want a hassle free setup of Rancher using R
 
 # Stack information
 
-The stacks are very customisable, including an RDS instance for database storage of the Rancher Server, a single EC2 instance for Rancher Server and several instances for the Rancher nodes.  There is a security group for the RDS instance.
+The stacks are very customisable, including an RDS instance for database storage of the Rancher Server, a single EC2 instance for Rancher Server and several instances for the Rancher nodes.
 
-## Create Security Group
+### Create MySQL and Rancher Server Instance
 
-Create security group for RDS instance by uploading the rds-security-group template.  This is simple stack to allow access to the database from the server.
+Create these resources by uploading the rancher template.  If the Rancher server goes down, all your data will be stored in MySQL.  You can select the instance type you want as well as other parameters around RDS, or you can use the defaults.
 
-### Create MySQL Instance
-
-Create the MySQL instance by uploading the RDS template.  If the Rancher server goes down, all your data will be stored here.  Create this by uploading the RDS template and use the RancherRDSSecurityGroup ID resource you just created.  If is important that you copy the correct security group, otherwise it will not work.  
-
-This security group will be found in the Resources tab in the AWS console.
-
-### Create Rancher Server Instance
-
-Create the Rancher Server instance by uploading the rancher template.  This instance will run on top of RancherOS, you will need to use the RDSComponentSecurityGroup as well as all of the MySQL details from the RDS section of the AWS Console.  
-
-Once completed, the Rancher server will be available at the load balancer URL found in the Load Balancer section in the EC2 Console.
+The Rancher Server instance will run on top of RancherOS.  Once completed, the Rancher server will be available at the load balancer URL found in the Load Balancer section in the EC2 Console.
 
 If running RancherOS is not an option, you will need to chance the UserData section to remove the Rancher specific start up options.
 
