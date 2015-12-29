@@ -1,0 +1,248 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "MinSize": {
+      "Type": "String",
+      "Description": "The minimum number of instances",
+      "Default": 3
+    },
+    "MaxSize": {
+      "Type": "String",
+      "Description": "The maximum number of instances",
+      "Default": 5
+    },
+    "InstanceType": {
+      "Type": "String",
+      "Description": "The size of the instances",
+      "Default": "t2.small"
+    },
+    "ImageId": {
+      "Type": "String",
+      "Default": "ami-9d6fb4ee"
+    },
+    "KeyName": {
+      "Type": "AWS::EC2::KeyPair::KeyName"
+    },
+    "CPUAlarmHighEvalPeriods": {
+      "Type": "String",
+      "Default": "1"
+    },
+    "CPUAlarmHighThreshold": {
+      "Type": "String",
+      "Default": "80"
+    },
+    "CPUAlarmLowThreshold": {
+      "Type": "String",
+      "Default": "60"
+    },
+    "CPUAlarmLowEvalPeriods": {
+      "Type": "String",
+      "Default": "5"
+    },
+    "AlarmPeriod": {
+      "Type": "String",
+      "Default": "60"
+    },
+    "RancherServerURL": {
+      "Type": "String"
+    },
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Default": "vpc-"
+    }
+  },
+  "Resources": {
+    "ComponentAutoScalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "UpdatePolicy": {
+        "AutoScalingRollingUpdate": {
+          "MinInstancesInService": 1,
+          "MaxBatchSize": 1,
+          "PauseTime": "PT0S"
+        }
+      },
+      "Properties": {
+        "Tags": [
+          {
+            "Value": "rancher",
+            "PropagateAtLaunch": true,
+            "Key": "Project"
+          },
+          {
+            "Value": "rancher-node",
+            "PropagateAtLaunch": true,
+            "Key": "Name"
+          },
+          {
+            "Value": "rancher-node",
+            "PropagateAtLaunch": true,
+            "Key": "Component"
+          }
+        ],
+        "MinSize": {
+          "Ref": "MinSize"
+        },
+        "MaxSize": {
+          "Ref": "MaxSize"
+        },
+        "LaunchConfigurationName": {
+          "Ref": "ComponentLaunchConfiguration"
+        },
+        "AvailabilityZones": {
+          "Fn::GetAZs": ""
+        }
+      }
+    },
+    "ComponentLaunchConfiguration": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "ComponentSecurityGroup"
+          }
+        ],
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "ImageId": {
+          "Ref": "ImageId"
+        },
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#cloud-config\n",
+                "rancher:\n",
+                "  services:\n",
+                "    register:\n",
+                "      priviledged: true\n",
+                "      volumes:\n",
+                "      - /var/run/docker.sock:/var/run/docker.sock\n",
+                "      image: rancher/agent\n",
+                "      command:\n",
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "      - ",
+                      {
+                        "Ref": "RancherServerURL"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "ComponentScaleUpPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AutoScalingGroupName": {
+          "Ref": "ComponentAutoScalingGroup"
+        },
+        "AdjustmentType": "ChangeInCapacity",
+        "Cooldown": 240,
+        "ScalingAdjustment": 1
+      }
+    },
+    "ComponentScaleDownPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AutoScalingGroupName": {
+          "Ref": "ComponentAutoScalingGroup"
+        },
+        "AdjustmentType": "ChangeInCapacity",
+        "Cooldown": 60,
+        "ScalingAdjustment": -1
+      }
+    },
+    "CPUAlarmHigh": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "Scale-up if CPU > 80% for 1 minutes",
+        "Threshold": {
+          "Ref": "CPUAlarmHighThreshold"
+        },
+        "AlarmActions": [
+          {
+            "Ref": "ComponentScaleUpPolicy"
+          }
+        ],
+        "ComparisonOperator": "GreaterThanThreshold",
+        "EvaluationPeriods": {
+          "Ref": "CPUAlarmHighEvalPeriods"
+        },
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": {
+          "Ref": "AlarmPeriod"
+        },
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": {
+              "Ref": "ComponentAutoScalingGroup"
+            }
+          }
+        ]
+      }
+    },
+    "CPUAlarmLow": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "Scale-down if CPU < 60% for 5 minutes",
+        "Threshold": {
+          "Ref": "CPUAlarmLowThreshold"
+        },
+        "AlarmActions": [
+          {
+            "Ref": "ComponentScaleDownPolicy"
+          }
+        ],
+        "ComparisonOperator": "LessThanThreshold",
+        "EvaluationPeriods": {
+          "Ref": "CPUAlarmLowEvalPeriods"
+        },
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": {
+          "Ref": "AlarmPeriod"
+        },
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": {
+              "Ref": "ComponentAutoScalingGroup"
+            }
+          }
+        ]
+      }
+    },
+    "ComponentSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "SecurityGroupIngress": [
+          {
+            "FromPort": 0,
+            "ToPort": 0,
+            "IpProtocol": "-1",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "GroupDescription": "A component security group allowing access to the outside world"
+      }
+    }
+  }
+}

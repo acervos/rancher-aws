@@ -1,0 +1,455 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "HealthCheckGracePeriod": {
+      "Type": "String",
+      "Description": "The length of time in seconds after a new EC2 instance comes into service that Auto Scaling starts checking its health.",
+      "Default": 600
+    },
+    "InstanceType": {
+      "Type": "String",
+      "Description": "The size of the instances",
+      "Default": "t2.medium"
+    },
+    "ImageId": {
+      "Type": "String",
+      "Default": "ami-9d6fb4ee"
+    },
+    "KeyName": {
+      "Type": "AWS::EC2::KeyPair::KeyName"
+    },
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id",
+      "Default": "vpc-"
+    },
+    "PublicSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Default": "subnet-"
+    },
+    "ELBConnectionDraining": {
+      "Type": "String",
+      "Description": "Connection draining ensures that the load balancer completes serving all in-flight requests made to a registered instance when the instance is deregistered or becomes unhealthy",
+      "Default": 30
+    },
+    "AllocatedStorage": {
+      "Type": "String",
+      "Default": "5",
+      "Description": "Disk space, default 5GB"
+    },
+    "BackupRetentionPeriod": {
+      "Type": "String",
+      "Default": "7",
+      "Description": "Number of days"
+    },
+    "DBInstanceClass": {
+      "Type": "String",
+      "Default": "db.t2.medium"
+    },
+    "DBInstanceIdentifier": {
+      "Type": "String",
+      "Default": "rancher-master"
+    },
+    "DBName": {
+      "Type": "String",
+      "Default": "rancher"
+    },
+    "MasterUsername": {
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "16",
+      "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+      "Description": "Username for database access"
+    },
+    "MasterUserPassword": {
+      "NoEcho": true,
+      "Type": "String",
+      "Description": "Password for database access - minimum 8 characters",
+      "MinLength": "8",
+      "MaxLength": "41",
+      "AllowedPattern": "[a-zA-Z0-9]*",
+      "ConstraintDescription": "must contain 8 alphanumeric characters."
+    },
+    "MultiAZ": {
+      "Type": "String",
+      "Default": true,
+      "Description": "Provides enhanced availablily for RDS"
+    },
+    "Port": {
+      "Type": "String",
+      "Default": "3306",
+      "Description": "Standard Port for MySQL"
+    },
+    "PubliclyAccessible": {
+      "Type": "String",
+      "Default": false,
+      "Description": "Determines if the MySQL instance can be connected to outside of you VPC"
+    },
+    "StorageType": {
+      "Type": "String",
+      "Default": "gp2",
+      "Description": "Disk type for RDS"
+    }
+  },
+  "Resources": {
+    "ComponentAutoScalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "UpdatePolicy": {
+        "AutoScalingRollingUpdate": {
+          "MinInstancesInService": 1,
+          "MaxBatchSize": 1,
+          "PauseTime": "PT0S"
+        }
+      },
+      "Properties": {
+        "Tags": [
+          {
+            "Value": "rancher",
+            "PropagateAtLaunch": true,
+            "Key": "Project"
+          },
+          {
+            "Value": "rancher-server",
+            "PropagateAtLaunch": true,
+            "Key": "Name"
+          },
+          {
+            "Value": "rancher-server",
+            "PropagateAtLaunch": true,
+            "Key": "Component"
+          }
+        ],
+        "LoadBalancerNames": [
+          {
+            "Ref": "ComponentElasticLoadBalancer"
+          }
+        ],
+        "MinSize": 1,
+        "MaxSize": 2,
+        "LaunchConfigurationName": {
+          "Ref": "ComponentLaunchConfiguration"
+        },
+        "AvailabilityZones": {
+          "Fn::GetAZs": ""
+        },
+        "HealthCheckType": "ELB",
+        "HealthCheckGracePeriod": {
+          "Ref": "HealthCheckGracePeriod"
+        }
+      },
+      "DependsOn": "ServiceComponentRDS"
+    },
+    "ComponentLaunchConfiguration": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "ComponentSecurityGroup"
+          },
+          {
+            "Ref": "RDSComponentSecurityGroup"
+          }
+        ],
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "ImageId": {
+          "Ref": "ImageId"
+        },
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#cloud-config\n",
+                "rancher:\n",
+                "  services:\n",
+                "    rancher-server:\n",
+                "      image: rancher/server\n",
+                "      ports:\n",
+                "      - 8080:8080\n",
+                "      restart: always\n",
+                "      environment:\n",
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "        - CATTLE_DB_CATTLE_MYSQL_HOST=",
+                      {
+                        "Fn::GetAtt": [
+                          "ServiceComponentRDS",
+                          "Endpoint.Address"
+                        ]
+                      },
+                      "\n"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "        - CATTLE_DB_CATTLE_MYSQL_PORT=",
+                      {
+                        "Fn::GetAtt": [
+                          "ServiceComponentRDS",
+                          "Endpoint.Port"
+                        ]
+                      },
+                      "\n"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "        - CATTLE_DB_CATTLE_MYSQL_NAME=",
+                      {
+                        "Ref": "DBName"
+                      },
+                      "\n"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "        - CATTLE_DB_CATTLE_USERNAME=",
+                      {
+                        "Ref": "MasterUsername"
+                      },
+                      "\n"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "        - CATTLE_DB_CATTLE_PASSWORD=",
+                      {
+                        "Ref": "MasterUserPassword"
+                      },
+                      "\n"
+                    ]
+                  ]
+                }
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "LoadBalancerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "SecurityGroupIngress": [
+          {
+            "ToPort": 80,
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "GroupDescription": "An ELB group allowing access only to from the corresponding component"
+      }
+    },
+    "ComponentSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "SecurityGroupIngress": [
+          {
+            "FromPort": 8080,
+            "ToPort": 8080,
+            "IpProtocol": "tcp",
+            "SourceSecurityGroupId": {
+              "Ref": "LoadBalancerSecurityGroup"
+            }
+          },
+          {
+            "FromPort": 4500,
+            "ToPort": 4500,
+            "IpProtocol": "udp",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "FromPort": 22,
+            "ToPort": 22,
+            "IpProtocol": "tcp",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "FromPort": 500,
+            "ToPort": 500,
+            "IpProtocol": "udp",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "GroupDescription": "A component security group allowing access only from the corresponding ELB"
+      }
+    },
+    "ComponentElasticLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "CrossZone": true,
+        "Subnets": {
+          "Ref": "PublicSubnets"
+        },
+        "Listeners": [
+          {
+            "InstancePort": 8080,
+            "LoadBalancerPort": 80,
+            "Protocol": "tcp",
+            "InstanceProtocol": "tcp"
+          }
+        ],
+        "SecurityGroups": [
+          {
+            "Ref": "LoadBalancerSecurityGroup"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "EnableProxyProtocol",
+            "InstancePorts": [
+              "8080"
+            ],
+            "PolicyType": "ProxyProtocolPolicyType",
+            "Attributes": [
+              {
+                "Name": "ProxyProtocol",
+                "Value": "true"
+              }
+            ]
+          }
+        ],
+        "HealthCheck": {
+          "HealthyThreshold": 3,
+          "Interval": 15,
+          "Target": "HTTP:8080/ping",
+          "Timeout": 10,
+          "UnhealthyThreshold": 8
+        },
+        "ConnectionDrainingPolicy": {
+          "Enabled": true,
+          "Timeout": {
+            "Ref": "ELBConnectionDraining"
+          }
+        }
+      }
+    },
+    "ServiceComponentRDS": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "AllocatedStorage": {
+          "Ref": "AllocatedStorage"
+        },
+        "BackupRetentionPeriod": {
+          "Ref": "BackupRetentionPeriod"
+        },
+        "DBInstanceClass": {
+          "Ref": "DBInstanceClass"
+        },
+        "DBInstanceIdentifier": {
+          "Ref": "DBInstanceIdentifier"
+        },
+        "DBName": {
+          "Ref": "DBName"
+        },
+        "Engine": "MySQL",
+        "MasterUsername": {
+          "Ref": "MasterUsername"
+        },
+        "MasterUserPassword": {
+          "Ref": "MasterUserPassword"
+        },
+        "MultiAZ": {
+          "Ref": "MultiAZ"
+        },
+        "Port": {
+          "Ref": "Port"
+        },
+        "PubliclyAccessible": {
+          "Ref": "PubliclyAccessible"
+        },
+        "StorageType": {
+          "Ref": "StorageType"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "RancherRDSSecurityGroup"
+          }
+        ],
+        "DBSubnetGroupName": {
+          "Ref": "ServiceSubnetRDS"
+        }
+      }
+    },
+    "ServiceSubnetRDS": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "VPC access",
+        "SubnetIds": {
+          "Ref": "PublicSubnets"
+        }
+      }
+    },
+    "RDSComponentSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "GroupDescription": "Component security group for RDS"
+      }
+    },
+    "RancherRDSSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "SecurityGroupIngress": [
+          {
+            "ToPort": "3306",
+            "IpProtocol": "tcp",
+            "FromPort": "3306",
+            "SourceSecurityGroupId": {
+              "Ref": "RDSComponentSecurityGroup"
+            }
+          }
+        ],
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "GroupDescription": "RDS security group"
+      }
+    }
+  },
+  "Outputs": {
+    "WebsiteURL": {
+      "Value": {
+       "Fn::Join": [
+         "",
+         [
+           "http://",
+           {
+             "Fn::GetAtt": [
+               "ComponentElasticLoadBalancer",
+               "DNSName"
+             ]
+           }
+         ]
+       ]
+     },
+      "Description": "URL for newly created rancher application"
+    }
+  }
+}

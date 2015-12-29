@@ -1,0 +1,7 @@
+.bundle
+shots/
+data.txt
+.DS_Store
+*.swp
+public/
+*.rdb
