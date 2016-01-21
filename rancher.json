@@ -101,6 +101,7 @@
         }
       },
       "Properties": {
+        "VPCZoneIdentifier" : { "Ref" : "PublicSubnets" },
         "Tags": [
           {
             "Value": "rancher",
