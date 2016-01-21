@@ -49,6 +49,10 @@
     "VpcId": {
       "Type": "AWS::EC2::VPC::Id",
       "Default": "vpc-"
+    },
+    "PublicSubnets": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Default": "subnet-"
     }
   },
   "Resources": {
@@ -62,6 +66,7 @@
         }
       },
       "Properties": {
+        "VPCZoneIdentifier" : { "Ref" : "PublicSubnets" },
         "Tags": [
           {
             "Value": "rancher",
