@@ -18,7 +18,7 @@ If running RancherOS is not an option, you will need to chance the UserData sect
 
 ### Create Rancher Node Instances
 
-Create the Rancher Nodes.  If you are going to use to use the load balancer URL rather than a domain you own, visit that in your browser, otherwise you can use a domain you own via a service such as Route53.  
+Create the Rancher Nodes.  If you are going to use the load balancer URL rather than a domain you own, visit that in your browser, otherwise you can use a domain you own via a service such as Route53.  
 
 When you first visit Rancher, it will ask you to set up authentication, probably via Github, set this up as prompted and then visit the infrastructure tab.  
 
