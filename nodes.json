@@ -18,7 +18,7 @@
     },
     "ImageId": {
       "Type": "String",
-      "Default": "ami-9d6fb4ee"
+      "Default": "ami-f349e780"
     },
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName"
